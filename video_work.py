@@ -72,26 +72,39 @@ def main():
             for id in range(1, 5):
                 if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
                     fingers_up.append(tipIds[id])
-                    print(fingers_up)
+                    # print(fingers_up)
                 else:
                     pass
             # number of fungers up is len(fingers_up)
-            if number_fingers_up != fingers_up:  # to print the number of fingers up everytime it changes
+            # if number_fingers_up != fingers_up:  # to print the number of fingers up everytime it changes
 
-                print(f'number of fingers_up is {len(fingers_up)}')
+            if len(fingers_up) != 5:
+
+                pass
+            # print(f'number of fingers_up is {len(fingers_up)}')
+            else:
+                if len(fingers_up) == 0:
+                    if len(fingers_up) == 5:
+                        print("eraser")
+                    else:
+                        pass
+                else:
+                    pass
             if len(fingers_up) == 2:
                 # x2 , y2 = lmList[12][2:]
                 cv2.circle(image, (ms[1], ms[2]), 10, (255, 0, 25), cv2.FILLED)
-                print(cs[1], cs[2], ms[1], ms[2])
+                # print(cs[1], cs[2], ms[1], ms[2])
                 cv2.rectangle(image, (cs[1], cs[2] - 25), (ms[1], ms[2] + 25), (255, 0, 255), cv2.FILLED)
-                print('selection mode')
+                # print('selection mode')
+                drawing_mode = False
             if len(fingers_up) == 1:
 
                 # if drawcolour ==(0,0,0):                                        #for eraser
                 # cv2.line(imgCanvas,(xp,yp),(cs[1],cs[2]) , (0,0,0), 15)
                 # cv2.line(image,(xp,yp),(cs[1],cs[2]) , (25,0,255), 15)     #(image, initial , final , color , brush size)
 
-                print('drawing mode')
+                # print('drawing mode')
+                drawing_mode = True
                 if xp == 0 and yp == 0:  # otherwise will start the line from (0,0)
                     xp, yp = cs[1], cs[2]
                 cv2.line(image, (xp, yp), (cs[1], cs[2]), (25, 0, 255),
@@ -99,6 +112,13 @@ def main():
                 cv2.line(imgCanvas, (xp, yp), (cs[1], cs[2]), (255, 0, 255), 10)
                 xp, yp = cs[1], cs[2]
                 number_fingers_up = fingers_up
+            if len(fingers_up) == 4:  # eraser
+                # print("eraser mode")
+                drawing_mode = False
+                cv2.line(image, (xp, yp), (cs[1], cs[2]), (25, 255, 0), 15)
+                cv2.line(imgCanvas, (xp, yp), (cs[1], cs[2]), (0, 0, 0), 100)
+
+
             xp, yp = cs[1], cs[2]
             # cv2.rectangle(image, (cs[1],cs[2]-25), (ms[1],ms[2]+25) , (25,0,255), cv2.FILLED )
 
@@ -130,5 +150,5 @@ def main():
     cv2.destroyAllWindows()
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+main()
