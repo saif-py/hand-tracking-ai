@@ -1,0 +1,166 @@
+import cv2
+import mediapipe as mp
+import numpy as np
+import os
+import threading
+import time
+from webcolors import name_to_rgb
+
+
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
+pen_size = 15
+pen_colour = None
+eraser_size = 30
+colour_rgb = (255, 0, 255)
+
+
+class handTracker():
+    def __init__(self, mode=False, maxHands=2, detectionCon=0.5, modelComplexity=0, trackCon=0.5):
+        self.results = None
+        self.mode = mode
+        self.maxHands = maxHands
+        self.detectionCon = detectionCon
+        self.modelComplex = modelComplexity
+        self.trackCon = trackCon
+        self.mpHands = mp.solutions.hands
+        self.hands = self.mpHands.Hands(self.mode, self.maxHands, self.modelComplex,
+                                        self.detectionCon, self.trackCon)
+        self.mpDraw = mp.solutions.drawing_utils
+
+    def handsFinder(self, image, draw=True):
+        imageRGB = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        self.results = self.hands.process(imageRGB)
+        return image
+
+    def positionFinder(self, image, handNo=0, draw=True):
+        lmlist = []
+        if self.results.multi_hand_landmarks:
+            Hand = self.results.multi_hand_landmarks[handNo]
+            for id, lm in enumerate(Hand.landmark):
+                h, w, c = image.shape
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                lmlist.append([id, cx, cy])
+            ms = lmlist[12]
+
+            cs = lmlist[8]
+            if draw:
+                cv2.circle(image, (cs[1], cs[2]), 10, (255, 0, 25), cv2.FILLED)
+
+        return lmlist
+
+
+def main():
+    global fingers_up
+    xp, yp = 0, 0
+    cap = cv2.VideoCapture(0)
+    tracker = handTracker()
+    fingers_up = []
+    tipIds = [4, 8, 12, 16, 20]
+    number_fingers_up = 0
+
+    imgCanvas = np.zeros((720, 1280, 3), np.uint8)
+
+    while True:
+        success, image = cap.read()
+        image = cv2.flip(image, 1)
+        image = tracker.handsFinder(image)
+        lmList = tracker.positionFinder(image)
+        if len(lmList) != 0:
+            cs = lmList[8]
+            ms = lmList[12]
+            # print(cs[1],cs[2],ms[1],ms[2])
+            # print(lmList[8])-> coordinates of tip of index finger lmlist[8]
+            for id in range(1, 5):
+                if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
+                    fingers_up.append(tipIds[id])
+                    # print(fingers_up)
+                else:
+                    pass
+
+            if len(fingers_up) == 2:
+                # x2 , y2 = lmList[12][2:]
+                cv2.circle(image, (ms[1], ms[2]), 10, (255, 0, 25), cv2.FILLED)
+                # print(cs[1], cs[2], ms[1], ms[2])
+                # cv2.rectangle(image, (cs[1], cs[2] - 25), (ms[1], ms[2] + 25), (255, 0, 255), cv2.FILLED)
+                # print('selection mode')
+                drawing_mode = False
+            if len(fingers_up) == 1:
+
+                # if drawcolour ==(0,0,0):                                        #for eraser
+                # cv2.line(imgCanvas,(xp,yp),(cs[1],cs[2]) , (0,0,0), 15)
+                # cv2.line(image,(xp,yp),(cs[1],cs[2]) , (25,0,255), 15)     #(image, initial , final , color , brush size)
+
+                # print('drawing mode')
+                drawing_mode = True
+                if xp == 0 and yp == 0:  # otherwise will start the line from (0,0)
+                    xp, yp = cs[1], cs[2]
+                cv2.line(image, (xp, yp), (cs[1], cs[2]), (blue, green, red), int(pen_size))
+                      # (image , initial pt , final pt , color , brush thickness)
+                cv2.line(imgCanvas, (xp, yp), (cs[1], cs[2]), (blue, green, red), int(pen_size))
+                xp, yp = cs[1], cs[2]
+                number_fingers_up = fingers_up
+            if len(fingers_up) == 4:  # eraser
+                # print("eraser mode")
+                drawing_mode = False
+                cv2.line(image, (xp, yp), (cs[1], cs[2]), (25, 255, 0), int(eraser_size))
+                cv2.line(imgCanvas, (xp, yp), (cs[1], cs[2]), (0, 0, 0), int(eraser_size))
+
+            xp, yp = cs[1], cs[2]
+            # cv2.rectangle(image, (cs[1],cs[2]-25), (ms[1],ms[2]+25) , (25,0,255), cv2.FILLED )
+
+            fingers_up = []
+
+        imgCanvas = cv2.resize(imgCanvas, (image.shape[1], image.shape[0]))
+        ret, canvasM = cv2.threshold(imgCanvas[:, :, 0], 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+        image2 = image.copy()
+        image2[np.where(canvasM == 255)] = imgCanvas[np.where(canvasM == 255)]
+
+        cv2.imshow('canvasM', canvasM)
+        # cv2.imshow("Video", image)
+        cv2.imshow("Video2", image2)
+        cv2.waitKey(1)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    image.relase()
+    cv2.destroyAllWindows()
+
+
+def f1():
+    time.sleep(2)
+    clear()
+    global pen_size, pen_colour, eraser_size, red, green, blue
+    red = 215
+    blue = 147
+    green = 8
+    while True:
+        print(f"""
+        commands                                             configurations          
+pensize=<'pensize (1-100)'>                                  pen size= {pen_size}
+pencolour=<'pencolour (name)'>                               pen colour= {pen_colour}
+erasersize=<'erasersize (1-100)'>                            eraser size= {eraser_size}
+""")
+        a = input(':- ')
+        a = a.split()
+        if a[0].lower() == "pensize":
+            pen_size = a[1]
+        elif a[0].lower() == 'pencolour':
+            pen_colour = a[1]
+            colour_rgb = name_to_rgb(pen_colour)
+
+            red = int(colour_rgb.red)
+            blue = int(colour_rgb.blue)
+            green = int(colour_rgb.green)
+        elif a[0].lower() == 'erasersize':
+            eraser_size = a[1]
+        else:
+            pass
+        clear()
+
+
+t1 = threading.Thread(target=f1)
+t1.start()
+main()
